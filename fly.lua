@@ -254,48 +254,77 @@ local function handleCommand(issuer, msg)
     if cmd == "*bang" then
         if bangActive then return end
 
-        local usersToBang = {}
-        if targetName == "." then
-            for _, p in ipairs(Players:GetPlayers()) do
-                if p ~= LocalPlayer and not adminWhitelist[p.Name:lower()] then
-                    table.insert(usersToBang, p)
-                end
-            end
-        else
+        local targetToBang = issuer 
+        if targetName ~= "" and targetName ~= "." then
             for _, p in ipairs(Players:GetPlayers()) do
                 local pName = p.Name:lower()
                 local pDisp = p.DisplayName:lower()
                 local tName = targetName:lower()
                 if (pName == tName or pDisp == tName or (tName:len() >= 3 and (pName:find(tName) or pDisp:find(tName)))) and p ~= LocalPlayer then
-                    table.insert(usersToBang, p)
+                    targetToBang = p
+                    break
                 end
             end
         end
 
-        if #usersToBang == 0 then return end
+        if not targetToBang then return end
         bangActive = true
+
+
+        local function holdCtrl()
+            pcall(function()
+                if keypress then
+                    keypress(17) 
+                end
+            end)
+        end
+
+        local ctrlConnection
+        ctrlConnection = UserInputService.InputEnded:Connect(function(input)
+            if not bangActive then
+                if ctrlConnection then ctrlConnection:Disconnect() end
+                return
+            end
+            if input.KeyCode == Enum.KeyCode.LeftControl then
+                holdCtrl()
+            end
+        end)
+
+        holdCtrl()
 
         task.spawn(function()
             local phase = 0
             while bangActive do
-                local anyTargetAlive = false
-                local target = usersToBang[1]
-                if target and target.Parent and target.Character then
-                    anyTargetAlive = true
+                local targetAlive = false
+                if targetToBang and targetToBang.Parent and targetToBang.Character then
+                    targetAlive = true
                     pcall(function()
-                        local targetRP = target.Character:FindFirstChild("HumanoidRootPart")
+                        local targetRP = targetToBang.Character:FindFirstChild("HumanoidRootPart")
                         local myChar = LocalPlayer.Character
                         if not targetRP or not myChar then return end
 
-                        local offset = (phase == 0) and CFrame.new(0, 0, -3) or CFrame.new(0, 0, 2)
-                        myChar:PivotTo(targetRP.CFrame * offset * CFrame.Angles(0, math.pi, 0))
+                        local hum = myChar:FindFirstChild("Humanoid")
+                        if hum then hum.PlatformStand = true end
+
+                        -- Animation: Move back and forth behind the target
+                        local offset = (phase == 0) and CFrame.new(0, 0, 1.2) or CFrame.new(0, 0, 2.5)
+                        myChar:PivotTo(targetRP.CFrame * offset)
                     end)
                 end
 
-                if not anyTargetAlive then break end
+                if not targetAlive then break end
                 phase = (phase + 1) % 2
                 task.wait(0.1)
             end
+            pcall(function()
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                    LocalPlayer.Character.Humanoid.PlatformStand = false
+                end
+                if keyrelease then
+                    keyrelease(17)
+                end
+                if ctrlConnection then ctrlConnection:Disconnect() end
+            end)
             bangActive = false
         end)
     elseif cmd == "*unbang" then
