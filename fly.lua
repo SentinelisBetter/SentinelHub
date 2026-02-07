@@ -323,11 +323,22 @@ local function handleCommand(issuer, msg)
                         if hum then hum.PlatformStand = true end
 
 
+                        local root = myChar:FindFirstChild("HumanoidRootPart")
+                        if not root then return end
+
+                        -- Smooth Sine Wave Movement for a more natural feel
                         local t = tick() - startT
-                        local wave = (math.sin(t * 12) + 1) / 2 
-                        local dist = -0.8 + (wave * -1.4) 
+                        local wave = (math.sin(t * 12) + 1) / 2
+                        local dist = -0.8 + (wave * -1.4)
                         
-                        myChar:PivotTo(targetRP.CFrame * CFrame.new(0, 0, dist))
+                        -- Using CFrame directly but ensuring we don't break camera
+                        -- We move the RootPart but keep the character structure intact
+                        local targetCFrame = targetRP.CFrame * CFrame.new(0, 0, dist)
+                        myChar:SetPrimaryPartCFrame(targetCFrame)
+                        
+                        -- Force velocity to 0 to prevent physics jitter but allow camera to follow
+                        root.Velocity = Vector3.new(0, 0, 0)
+                        root.RotVelocity = Vector3.new(0, 0, 0)
                     end)
                 end
 
@@ -385,14 +396,17 @@ local function handleCommand(issuer, msg)
         pcall(function()
             local char = LocalPlayer.Character
             if char then
-
-                char:BreakJoints()
-
                 local hum = char:FindFirstChild("Humanoid")
-                if hum then hum.Health = 0 end
-
-                char:ClearAllChildren()
-                char:Destroy()
+                if hum then
+                    hum.Health = 0
+                end
+                char:BreakJoints()
+                
+                for _, v in ipairs(char:GetChildren()) do
+                    if v:IsA("BasePart") or v:IsA("Accessory") then
+                        v:Destroy()
+                    end
+                end
             end
         end)
     elseif cmd == "*notify" then
