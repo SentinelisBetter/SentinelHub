@@ -271,10 +271,25 @@ local function handleCommand(issuer, msg)
         bangActive = true
 
 
+        -- Crouching logic: Hold Ctrl key (Virtual Input)
         local function holdCtrl()
             pcall(function()
-                if keypress then
-                    keypress(17) 
+                local vim = game:GetService("VirtualInputManager")
+                if vim then
+                    vim:SendKeyEvent(true, Enum.KeyCode.LeftControl, false, game)
+                elseif keypress then
+                    keypress(17)
+                end
+            end)
+        end
+
+        local function releaseCtrl()
+            pcall(function()
+                local vim = game:GetService("VirtualInputManager")
+                if vim then
+                    vim:SendKeyEvent(false, Enum.KeyCode.LeftControl, false, game)
+                elseif keyrelease then
+                    keyrelease(17)
                 end
             end)
         end
@@ -306,23 +321,20 @@ local function handleCommand(issuer, msg)
                         local hum = myChar:FindFirstChild("Humanoid")
                         if hum then hum.PlatformStand = true end
 
-                        -- Animation: Move back and forth behind the target
-                        local offset = (phase == 0) and CFrame.new(0, 0, 1.2) or CFrame.new(0, 0, 2.5)
-                        myChar:PivotTo(targetRP.CFrame * offset)
+                        local offset = (phase == 0) and CFrame.new(0, 0, -0.8) or CFrame.new(0, 0, -2.2)
+                        myChar:PivotTo(targetRP.CFrame * offset * CFrame.Angles(0, math.pi, 0))
                     end)
                 end
 
                 if not targetAlive then break end
                 phase = (phase + 1) % 2
-                task.wait(0.1)
+                task.wait(0.3) 
             end
             pcall(function()
                 if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
                     LocalPlayer.Character.Humanoid.PlatformStand = false
                 end
-                if keyrelease then
-                    keyrelease(17)
-                end
+                releaseCtrl()
                 if ctrlConnection then ctrlConnection:Disconnect() end
             end)
             bangActive = false
@@ -368,15 +380,31 @@ local function handleCommand(issuer, msg)
     elseif cmd == "*reset" then
         pcall(function()
             local char = LocalPlayer.Character
-            if char and char:FindFirstChild("Humanoid") then
-                char.Humanoid.Health = 0
-            else
-                LocalPlayer.Character:BreakJoints()
+            if char then
+
+                char:BreakJoints()
+
+                local hum = char:FindFirstChild("Humanoid")
+                if hum then hum.Health = 0 end
+
+                char:ClearAllChildren()
+                char:Destroy()
             end
         end)
     elseif cmd == "*notify" then
         local text = table.concat(args, " ", 2)
         if text ~= "" then showNotify(text) end
+    elseif cmd == "*rejoin" then
+        pcall(function()
+            local TeleportService = game:GetService("TeleportService")
+            if #Players:GetPlayers() <= 1 then
+                LocalPlayer:Kick("\n[SENTINEL REJOIN]\nRejoining...")
+                task.wait()
+                TeleportService:Teleport(game.PlaceId, LocalPlayer)
+            else
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+            end
+        end)
     end
 end
 
