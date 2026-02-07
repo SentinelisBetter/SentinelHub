@@ -309,6 +309,7 @@ local function handleCommand(issuer, msg)
 
         task.spawn(function()
             local phase = 0
+            local startT = tick()
             while bangActive do
                 local targetAlive = false
                 if targetToBang and targetToBang.Parent and targetToBang.Character then
@@ -321,14 +322,17 @@ local function handleCommand(issuer, msg)
                         local hum = myChar:FindFirstChild("Humanoid")
                         if hum then hum.PlatformStand = true end
 
-                        local offset = (phase == 0) and CFrame.new(0, 0, -0.8) or CFrame.new(0, 0, -2.2)
-                        myChar:PivotTo(targetRP.CFrame * offset * CFrame.Angles(0, math.pi, 0))
+
+                        local t = tick() - startT
+                        local wave = (math.sin(t * 12) + 1) / 2 
+                        local dist = -0.8 + (wave * -1.4) 
+                        
+                        myChar:PivotTo(targetRP.CFrame * CFrame.new(0, 0, dist))
                     end)
                 end
 
                 if not targetAlive then break end
-                phase = (phase + 1) % 2
-                task.wait(0.3) 
+                task.wait(0.01) 
             end
             pcall(function()
                 if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
