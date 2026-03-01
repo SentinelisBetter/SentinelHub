@@ -251,15 +251,6 @@ function Fiber:CreateWindow(cfg)
     }, TitleBar)
 
     -- Logo dot
-    Make("Frame", {
-        Size             = UDim2.new(0, 8, 0, 8),
-        Position         = UDim2.new(0, 14, 0.5, -4),
-        BackgroundColor3 = T.Accent,
-        BorderSizePixel  = 0,
-    }, TitleBar):SetAttribute("_corner", MakeCorner(
-        TitleBar:FindFirstChildWhichIsA("Frame"), 99
-    ))
-    -- Redo properly:
     local Dot = Make("Frame", {
         Name             = "Dot",
         Size             = UDim2.new(0, 8, 0, 8),
